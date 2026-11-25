@@ -51,11 +51,10 @@ A three-page Power BI report built on Google's public `thelook_ecommerce` datase
 | **3. Customers** | How do customers behave after the first order? |
 
 [Page 1: Overview] <img width="1920" height="1080" alt="Analytical Dashboard Business Overview" src="https://github.com/user-attachments/assets/86855350-21dc-4f52-a4be-009f10b8bcba" />
-[Page 2: Categories] <img width="1920" height="1080" alt="Analytical Dashboard Customers" src="https://github.com/user-attachments/assets/a64ee211-9ef2-484a-b801-1e6f001b8e23" />
-[Page 3: Customers] <img width="1920" height="1080" alt="Analytical Dashboard Categories" src="https://github.com/user-attachments/assets/b30f358d-4e10-4daa-94c5-170b60d96095" />
+[Page 2: Categories] <img width="1920" height="1080" alt="Analytical Dashboard Categories" src="https://github.com/user-attachments/assets/b30f358d-4e10-4daa-94c5-170b60d96095" />
+[Page 3: Customers] <img width="1920" height="1080" alt="Analytical Dashboard Customers" src="https://github.com/user-attachments/assets/a64ee211-9ef2-484a-b801-1e6f001b8e23" />
 
-A PDF export of all three pages is in Analytical_Dashboard.pdf
-.
+A PDF export of all three pages is in Analytical_Dashboard.pdf in the files.
 
 ---
 
