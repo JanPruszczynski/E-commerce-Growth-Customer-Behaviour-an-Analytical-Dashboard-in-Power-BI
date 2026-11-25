@@ -50,11 +50,12 @@ A three-page Power BI report built on Google's public `thelook_ecommerce` datase
 | **2. Categories** | Which categories earn the money? |
 | **3. Customers** | How do customers behave after the first order? |
 
-![Page 1: Overview] (images/Analytical Dashboard Business Overview.png)
+![Page 1: Overview] <img width="1920" height="1080" alt="Analytical Dashboard Business Overview" src="https://github.com/user-attachments/assets/86855350-21dc-4f52-a4be-009f10b8bcba" />
 ![Page 2: Categories](images/Analytical Dashboard Categories.png)
 ![Page 3: Customers](images/Analytical Dashboard Customers.png)
 
-A PDF export of all three pages is in `dashboard/Analytical_Dashboard.pdf`.
+A PDF export of all three pages is in Analytical_Dashboard.pdf
+.
 
 ---
 
