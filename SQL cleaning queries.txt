@@ -1,0 +1,194 @@
+This file includes all ran queries during the data cleaning process in the Google BigQuery sorted in order I ran them.
+
+1. Query Name - "Analytical Dashboard - Is the data internally consistent?"
+SELECT
+  COUNTIF(sale_price IS NULL) AS null_prices,
+  MIN(sale_price) AS min_price,
+  MAX(sale_price) AS max_price,
+  COUNTIF(product_id NOT IN (SELECT id FROM `bigquery-public-data.thelook_ecommerce.products`)) AS orphan_products,
+  COUNTIF(user_id NOT IN (SELECT id FROM `bigquery-public-data.thelook_ecommerce.users`)) AS orphan_users
+FROM `bigquery-public-data.thelook_ecommerce.order_items`;
+
+
+2. Query Name - "Analytical Dashboard - What periods does the data cover and is the last month complete"
+SELECT
+  DATE_TRUNC(DATE(created_at), MONTH) AS month,
+  COUNT(*) AS orders
+  FROM `bigquery-public-data.thelook_ecommerce.orders`
+  GROUP BY month
+  ORDER BY month
+  
+ 3.Query Name - "Analytical Dashboard - Status mix by month, newest first"
+SELECT
+  DATE_TRUNC(DATE(created_at), MONTH) AS month,
+  COUNT(*) AS items,
+  ROUND(100 * COUNTIF(status = 'Complete') / COUNT(*), 1) AS pct_complete,
+  ROUND(100 * COUNTIF(status = 'Shipped') / COUNT(*), 1) AS pct_shipped,
+  ROUND(100 * COUNTIF(status = 'Processing') / COUNT(*), 1) AS pct_processing,
+  ROUND(100 * COUNTIF(status = 'Cancelled') / COUNT(*), 1) AS pct_cancelled,
+  ROUND(100 * COUNTIF(status = 'Returned') / COUNT(*), 1) AS pct_returned
+FROM `bigquery-public-data.thelook_ecommerce.order_items`
+GROUP BY month
+ORDER BY month DESC;
+
+4. Query name - "Analytical Dashboard - Revenue, margin and return rate by category"
+SELECT
+  p.department,
+  p.category,
+  COUNT(*) AS items,
+  ROUND(SUM(IF(oi.status NOT IN ('Cancelled', 'Returned'), oi.sale_price, 0)), 0) AS net_revenue,
+  ROUND(100 * SAFE_DIVIDE(
+    SUM(IF(oi.status NOT IN ('Cancelled', 'Returned'), oi.sale_price - p.cost, 0)),
+    SUM(IF(oi.status NOT IN ('Cancelled', 'Returned'), oi.sale_price, 0))
+  ), 1) AS margin_pct,
+  ROUND(100 * COUNTIF(oi.status = 'Returned') / COUNT(*), 1) AS return_pct
+FROM `bigquery-public-data.thelook_ecommerce.order_items` oi
+JOIN `bigquery-public-data.thelook_ecommerce.products` p
+  ON p.id = oi.product_id
+GROUP BY p.department, p.category
+ORDER BY net_revenue DESC;
+
+5. Query name - "Analytical Dashboard - Revenue by country"
+SELECT
+  u.country,
+  COUNT(DISTINCT oi.user_id) AS buyers,
+  ROUND(SUM(IF(oi.status NOT IN ('Cancelled', 'Returned'), oi.sale_price, 0)), 0) AS net_revenue,
+  ROUND(SUM(IF(oi.status NOT IN ('Cancelled', 'Returned'), oi.sale_price, 0))
+        / COUNT(DISTINCT oi.user_id), 2) AS revenue_per_buyer
+FROM `bigquery-public-data.thelook_ecommerce.order_items` oi
+JOIN `bigquery-public-data.thelook_ecommerce.users` u
+  ON u.id = oi.user_id
+GROUP BY u.country
+ORDER BY net_revenue DESC;
+
+6. Query name - "Analytical Dashboard - Percent of users who bought"
+WITH buyers AS (
+  SELECT
+  DISTINCT user_id 
+  FROM `bigquery-public-data.thelook_ecommerce.orders`
+)
+  SELECT
+    u.traffic_source,
+    COUNT(*) AS users,
+    ROUND(COUNTIF(b.user_id IS NOT NULL) / (COUNT(*)) * 100, 2) AS pct_who_bought
+    FROM `bigquery-public-data.thelook_ecommerce.users` AS u
+    LEFT JOIN buyers AS b
+    ON b.user_id = u.id
+    GROUP BY traffic_source
+	
+7. Query name - "Analytical Dashboard - Orders placed before the customer signed up"
+SELECT
+  COUNT(*) AS orders,
+  COUNTIF(o.created_at < u.created_at) AS orders_before_signup
+FROM `bigquery-public-data.thelook_ecommerce.orders` o
+JOIN `bigquery-public-data.thelook_ecommerce.users` u
+  ON o.user_id = u.id;
+  
+ 8. Query name - "Analytical Dashboard - Order created_at compared to user created_at"
+ SELECT
+  u.id AS user_id,
+  o.created_at AS order_at,
+  u.created_at AS signed_at
+  FROM `bigquery-public-data.thelook_ecommerce.orders` AS o
+  JOIN `bigquery-public-data.thelook_ecommerce.users` AS u
+  ON o.user_id = u.id
+
+9. Query name - "Analytical Dashboard - How big is each table"
+SELECT 'orders' AS tbl, COUNT(*) AS n FROM `bigquery-public-data.thelook_ecommerce.orders`
+UNION ALL SELECT 'order_items', COUNT(*) FROM `bigquery-public-data.thelook_ecommerce.order_items`
+UNION ALL SELECT 'products', COUNT(*) FROM `bigquery-public-data.thelook_ecommerce.products`
+UNION ALL SELECT 'users', COUNT(*) FROM `bigquery-public-data.thelook_ecommerce.users`;
+
+10. Query name - "Analytical Dashboard  - What's going on in November"
+SELECT DATE(created_at) AS day,
+COUNT(*) AS items
+FROM `bigquery-public-data.thelook_ecommerce.order_items`
+WHERE created_at >= TIMESTAMP('2026-10-20')
+GROUP BY day
+ORDER BY day DESC;
+
+11. Query name - "Analytical Dashboard  - Repeat rate and spend per buyer by channel"
+WITH spending AS (
+  SELECT
+  o.user_id,
+  COUNT(DISTINCT o.order_id) AS orders,
+  SUM(oi.sale_price) AS spend
+  FROM `bigquery-public-data.thelook_ecommerce.orders` AS o
+  JOIN `bigquery-public-data.thelook_ecommerce.order_items` AS oi
+  ON o.order_id = oi.order_id
+  WHERE oi.status NOT IN ('Cancelled', 'Returned')
+  GROUP BY o.user_id
+)
+  SELECT
+    u.traffic_source,
+    COUNT(*) AS buyers,
+    ROUND(COUNTIF(s.orders > 1) / COUNT(*) * 100, 2) AS repeat_pct,
+    ROUND(AVG(s.spend), 2) AS avg_spend_per_buyer
+    FROM `bigquery-public-data.thelook_ecommerce.users` AS u
+    JOIN spending AS s
+    ON u.id = s.user_id
+    GROUP BY u.traffic_source
+
+12. Query name - "Analytical Dahsboard - What are the order item statuses, and how much revenue sits in each?"
+SELECT
+  status,
+  COUNT(*) AS items,
+  ROUND(SUM(sale_price), 0) AS revenue,
+  ROUND(100 * COUNT(*) / SUM(COUNT(*)) OVER (), 1) AS pct_of_items,
+FROM `bigquery-public-data.thelook_ecommerce.order_items`
+GROUP BY status
+ORDER BY items DESC;
+
+13. Query name - "Analyical Dashboard - Orders per customer"
+WITH cutomer_orders AS(
+  SELECT
+  user_id,
+  COUNT(*) AS orders_per_customer
+  FROM `bigquery-public-data.thelook_ecommerce.orders`
+  GROUP BY user_id
+)
+  SELECT
+    orders_per_customer,
+    COUNT(*) AS customers
+    FROM cutomer_orders
+    GROUP BY orders_per_customer
+    ORDER BY orders_per_customer DESC
+	
+14. Query name - "Analytical Dashboard - Fact table: order items"
+CREATE OR REPLACE TABLE Portfolio.fact_order_items AS
+SELECT
+  oi.id AS order_item_id,
+  oi.order_id,
+  oi.user_id,
+  oi.product_id,
+  DATE(o.created_at) AS order_date,
+  oi.status      AS item_status,
+  oi.sale_price,
+  p.cost         AS product_cost
+FROM `bigquery-public-data.thelook_ecommerce.order_items` oi
+JOIN `bigquery-public-data.thelook_ecommerce.orders` o
+  ON o.order_id = oi.order_id
+JOIN `bigquery-public-data.thelook_ecommerce.products` p
+  ON p.id = oi.product_id
+WHERE o.created_at < TIMESTAMP('2026-11-01');
+
+15. Query name - "Analytical Dashboard - Dimension: users"
+CREATE OR REPLACE TABLE Portfolio.dim_users AS
+SELECT
+  id AS user_id,
+  country,
+  traffic_source,
+  age,
+  DATE(created_at) AS signup_date
+FROM `bigquery-public-data.thelook_ecommerce.users`
+WHERE created_at < TIMESTAMP('2026-11-01');
+
+16. Query name - "Analytical Dashboard - Dimension: products"
+CREATE OR REPLACE TABLE Portfolio.dim_products AS
+SELECT
+  id AS product_id,
+  name AS product_name,
+  brand,
+  category,
+  department
+FROM `bigquery-public-data.thelook_ecommerce.products`;
